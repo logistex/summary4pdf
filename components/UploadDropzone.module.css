@@ -1,0 +1,25 @@
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--surface);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.dropzone:hover,
+.dropzone.dragOver {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+
+.hint {
+  margin-top: 8px;
+  color: var(--text-soft);
+  font-size: 0.875rem;
+}
+
+.hiddenInput {
+  display: none;
+}

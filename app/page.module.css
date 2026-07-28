@@ -1,0 +1,38 @@
+.main {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 48px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.loading {
+  text-align: center;
+  color: var(--text-soft);
+  padding: 48px 0;
+}
+
+.errorBox {
+  border: 1px solid var(--danger);
+  background: var(--danger-soft);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.errorBox button {
+  align-self: flex-start;
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  border-radius: 8px;
+  padding: 8px 16px;
+}
