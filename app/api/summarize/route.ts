@@ -13,7 +13,12 @@ import {
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const formData = await req.formData();
+  let formData: FormData;
+  try {
+    formData = await req.formData();
+  } catch {
+    return NextResponse.json({ error: NOT_PDF_MESSAGE }, { status: 400 });
+  }
   const file = formData.get("file");
 
   if (!(file instanceof File) || file.type !== "application/pdf") {

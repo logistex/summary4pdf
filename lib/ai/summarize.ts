@@ -46,15 +46,20 @@ function parseModelJson(
   }
 }
 
+function extractValidPoints(points: unknown): string[] {
+  if (!Array.isArray(points)) return [];
+  return points.filter(
+    (p): p is string => typeof p === "string" && p.trim().length > 0,
+  );
+}
+
 function isValidParsed(
   parsed: { summary?: unknown; points?: unknown } | null,
-): parsed is { summary: string; points: unknown[] } {
-  return (
-    !!parsed &&
-    typeof parsed.summary === "string" &&
-    parsed.summary.trim().length > 0 &&
-    Array.isArray(parsed.points)
-  );
+): boolean {
+  if (!parsed || typeof parsed.summary !== "string" || parsed.summary.trim().length === 0) {
+    return false;
+  }
+  return extractValidPoints(parsed.points).length >= 3;
 }
 
 /**
@@ -76,12 +81,12 @@ export async function summarizeText(text: string): Promise<SummarizeResult> {
   );
 
   const parsed = parseModelJson(raw);
-  if (!isValidParsed(parsed)) {
+  if (!parsed || !isValidParsed(parsed) || typeof parsed.summary !== "string") {
     throw new Error("요약 응답 파싱 실패");
   }
 
   return {
     summary: parsed.summary,
-    points: parsed.points.filter((p): p is string => typeof p === "string"),
+    points: extractValidPoints(parsed.points),
   };
 }

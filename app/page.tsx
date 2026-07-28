@@ -8,6 +8,8 @@ import {
   NOT_PDF_MESSAGE,
   SIZE_LIMIT_MESSAGE,
   SUMMARY_FAILED_MESSAGE,
+  TIMEOUT_MESSAGE,
+  NETWORK_ERROR_MESSAGE,
 } from "@/lib/constants";
 import styles from "./page.module.css";
 
@@ -43,17 +45,20 @@ export default function Home() {
 
     try {
       const res = await fetch("/api/summarize", { method: "POST", body: formData });
-      const json = await res.json();
       if (!res.ok) {
+        const json = await res.json().catch(() => null);
         setStatus("error");
-        setError(json.error ?? SUMMARY_FAILED_MESSAGE);
+        setError(
+          json?.error ?? (res.status === 504 ? TIMEOUT_MESSAGE : SUMMARY_FAILED_MESSAGE)
+        );
         return;
       }
+      const json = await res.json();
       setData(json);
       setStatus("result");
     } catch {
       setStatus("error");
-      setError("네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요");
+      setError(NETWORK_ERROR_MESSAGE);
     }
   }
 

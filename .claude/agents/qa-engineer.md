@@ -31,7 +31,7 @@ color: orange
 - **인증·DB 없음.** 이 앱은 stateless 도구라 계정·권한·데이터 정합성 테스트는 해당 없다. 대신 업로드→추출→요약→표시 흐름 자체와 에러 케이스에 집중한다.
 - 백엔드: Next.js App Router API(`POST /api/summarize`) + **OpenRouter(LLM, 무료 모델만)**. 프런트엔드는 그 API를 소비한다.
 - LLM 관련 기능은 **무료 모델(`:free`)**만 쓰도록 되어 있으므로, 테스트도 무료 모델 기준으로 하고 대량 호출을 만들지 않는다.
-- 반드시 확인할 엣지케이스: 빈 PDF, 스캔 이미지(텍스트 없는) PDF, 업로드 제한(10MB/20페이지) 초과, PDF가 아닌 파일, 초단문 PDF, 무료 모델 레이트리밋 시 폴백 동작.
+- 반드시 확인할 엣지케이스: 빈 PDF, 스캔 이미지(텍스트 없는) PDF, 업로드 제한(4MB/20페이지) 초과, PDF가 아닌 파일, 초단문 PDF, 무료 모델 레이트리밋 시 폴백 동작.
 - 자세한 에러 메시지 목록·테스트 범위는 [`docs/superpowers/specs/2026-07-28-pdf-summary-app-design.md`](../../docs/superpowers/specs/2026-07-28-pdf-summary-app-design.md) 참고.
 
 ## 산출물 원칙
