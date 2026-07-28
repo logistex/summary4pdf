@@ -22,6 +22,11 @@
 - 시크릿(`OPENROUTER_API_KEY` 등)은 코드·커밋·로그에 절대 남기지 않는다. `.env`는 git에 커밋되지 않는다(`.gitignore`로 제외).
 - 참고 문서: [`docs/superpowers/specs/2026-07-28-pdf-summary-app-design.md`](../specs/2026-07-28-pdf-summary-app-design.md)
 
+**로컬 테스트 PDF 생성·검증 관련 (Task 3 실행 중 발견, 계획 최초 작성 시에는 몰랐던 내용):**
+- 이 macOS는 `textutil -convert pdf`를 지원하지 않는다(`-help` 출력에 pdf가 없음). 테스트용 PDF는 대신 macOS 내장 `cupsfilter`로 만든다: `cupsfilter input.txt > output.pdf` (별도 설치 불필요, 실제 유효한 PDF 생성 확인됨).
+- 이 개발 머신의 Node 버전(v26.5.0)은 내장 `fetch()`가 `file://` 스킴을 아직 구현하지 않았다. 이 때문에 `unpdf`가 한글(CJK) cmap 리소스를 로드하지 못해, **로컬에서** 한글이 포함된 PDF를 추출하면 한글 부분이 깨지거나 누락된다(영어/숫자/문장부호는 정상 추출됨). 이는 `lib/pdf/extract.ts` 코드의 결함이 아니라 로컬 Node 버전의 한계이며, Vercel 배포 환경(표준 릴리스 Node)에서는 재현되지 않을 것으로 예상된다(확정은 아님).
+- **정책(사용자 승인)**: 코드는 수정하지 않는다. 로컬 스모크 테스트·브라우저 확인은 전부 **영어 텍스트**로 진행해 기능 흐름(업로드→추출→요약→표시, 에러 케이스)만 검증한다. 한글 처리는 배포 후 실제 환경에서 별도로 재확인한다. 아래 Task 4/6/7/8의 테스트 PDF 생성 예시 문구가 한글로 되어 있는 곳은 전부 이 정책에 따라 영어 문구로 대체해서 실행한다.
+
 ---
 
 ## Task 1: PRD·기능 명세 작성
@@ -407,14 +412,16 @@ export async function extractPdfText(buffer: Buffer): Promise<ExtractResult> {
 }
 ```
 
-- [ ] **Step 3: 스모크 테스트용 실제 PDF 생성 (macOS `textutil` 사용, 테스트 러너 없는 이 프로젝트 컨벤션)**
+- [ ] **Step 3: 스모크 테스트용 실제 PDF 생성 (macOS `cupsfilter` 사용, 테스트 러너 없는 이 프로젝트 컨벤션 — `textutil`은 이 macOS에서 pdf 출력을 지원하지 않아 대신 사용)**
+
+영어 텍스트 사용(Global Constraints의 로컬 검증 정책 참고 — 한글은 이 Node 버전의 `fetch() file://` 제약으로 로컬에서 깨진다):
 
 ```bash
-echo "PDF 요약 테스트 문서입니다. 이것은 텍스트 추출이 잘 되는지 확인하기 위한 샘플 본문입니다." > /tmp/pdf-smoke-test.txt
-textutil -convert pdf /tmp/pdf-smoke-test.txt -output /tmp/pdf-smoke-test.pdf
+echo "This is a PDF extraction smoke test document for the summary app." > /tmp/pdf-smoke-test.txt
+cupsfilter /tmp/pdf-smoke-test.txt > /tmp/pdf-smoke-test.pdf
 ```
 
-Expected: `/tmp/pdf-smoke-test.pdf` 생성됨(오류 없음).
+Expected: `/tmp/pdf-smoke-test.pdf` 생성됨(오류 없음, `file` 명령으로 확인 시 `PDF document`).
 
 - [ ] **Step 4: 임시 스모크 스크립트 작성 및 실행**
 
@@ -428,7 +435,7 @@ const buffer = await readFile("/tmp/pdf-smoke-test.pdf");
 const result = await extractPdfText(buffer);
 console.log(JSON.stringify(result));
 
-if (!result.text.includes("텍스트 추출")) {
+if (!result.text.includes("extraction smoke test")) {
   throw new Error("추출된 텍스트에 예상 문구가 없습니다: " + result.text);
 }
 if (result.pageCount !== 1) {
@@ -1284,25 +1291,27 @@ git commit -m "feat: 요약 결과 컴포넌트 분리 및 반응형/접근성 �
 
 - [ ] **Step 1: 테스트용 파일 준비**
 
+(테스트 PDF는 `cupsfilter`로 생성한다 — `textutil`은 이 macOS에서 pdf 출력을 지원하지 않는다. 영어 텍스트 사용: Global Constraints의 로컬 검증 정책 참고, 한글은 이 Node 버전의 `fetch() file://` 제약으로 로컬에서 깨진다.)
+
 ```bash
 # 정상 PDF (1페이지, 텍스트 있음) — Task 3에서 이미 생성했다면 재사용
-echo "PDF 요약 테스트 문서입니다. 이것은 텍스트 추출이 잘 되는지 확인하기 위한 샘플 본문입니다." > /tmp/pdf-smoke-test.txt
-textutil -convert pdf /tmp/pdf-smoke-test.txt -output /tmp/pdf-smoke-test.pdf
+echo "This is a PDF extraction smoke test document for the summary app." > /tmp/pdf-smoke-test.txt
+cupsfilter /tmp/pdf-smoke-test.txt > /tmp/pdf-smoke-test.pdf
 
 # 빈 PDF (텍스트 없음)
 : > /tmp/pdf-empty.txt
-textutil -convert pdf /tmp/pdf-empty.txt -output /tmp/pdf-empty.pdf
+cupsfilter /tmp/pdf-empty.txt > /tmp/pdf-empty.pdf
 
 # 초단문 PDF (한 문장)
-echo "짧다." > /tmp/pdf-tiny.txt
-textutil -convert pdf /tmp/pdf-tiny.txt -output /tmp/pdf-tiny.pdf
+echo "Short." > /tmp/pdf-tiny.txt
+cupsfilter /tmp/pdf-tiny.txt > /tmp/pdf-tiny.pdf
 
 # PDF가 아닌 파일
 echo "not a pdf" > /tmp/not-a-pdf.jpg
 
 # 21페이지 이상 PDF (페이지 제한 초과) — 반복 줄로 다페이지 생성 (python 등 추가 도구 불필요)
-for i in $(seq 1 800); do echo "본문 내용입니다. 페이지 초과 테스트용 반복 문장입니다."; done > /tmp/pdf-long-full.txt
-textutil -convert pdf /tmp/pdf-long-full.txt -output /tmp/pdf-long.pdf
+for i in $(seq 1 800); do echo "Repeated body text for page-limit testing purposes."; done > /tmp/pdf-long-full.txt
+cupsfilter /tmp/pdf-long-full.txt > /tmp/pdf-long.pdf
 ```
 
 Run: `npm run dev > /tmp/pdf-app-dev.log 2>&1 &` 후 `sleep 3`
@@ -1340,17 +1349,17 @@ curl -sS -i -X POST http://localhost:3000/api/summarize -F "file=@/tmp/pdf-tiny.
 ```bash
 curl -sS -i -X POST http://localhost:3000/api/summarize -F "file=@/tmp/pdf-long.pdf"
 ```
-기대: `400`, `{"error":"문서가 너무 큽니다(최대 10MB, 20페이지)"}`. (생성된 PDF가 실제로 20페이지를 넘는지 먼저 확인 — `textutil`은 텍스트량에 따라 페이지를 나눈다. 20페이지가 안 됐다면 반복 횟수를 늘려 다시 생성한다.)
+기대: `400`, `{"error":"문서가 너무 큽니다(최대 10MB, 20페이지)"}`. (생성된 PDF가 실제로 20페이지를 넘는지 먼저 확인 — `cupsfilter`는 텍스트량에 따라 페이지를 나눈다. 20페이지가 안 됐다면 반복 횟수를 늘려 다시 생성한다.)
 
 - [ ] **Step 7: 시나리오 6 — 용량 초과**
 
 ```bash
 head -c 11000000 /dev/urandom | base64 > /tmp/pdf-huge.txt
-textutil -convert pdf /tmp/pdf-huge.txt -output /tmp/pdf-huge.pdf 2>/dev/null || true
+cupsfilter /tmp/pdf-huge.txt > /tmp/pdf-huge.pdf 2>/dev/null || true
 ls -la /tmp/pdf-huge.pdf
 curl -sS -i -X POST http://localhost:3000/api/summarize -F "file=@/tmp/pdf-huge.pdf"
 ```
-기대: 생성된 PDF가 10MB를 넘으면 `400`(`SIZE_LIMIT_MESSAGE`). `textutil` 변환 결과가 10MB에 못 미치면, 파일 크기만 검증하는 별도 확인으로 대체: 실제 10MB 초과 더미 파일을 만들어 업로드했을 때 `413` 대신 애플리케이션 레벨 `400`이 오는지 확인한다.
+기대: 생성된 PDF가 10MB를 넘으면 `400`(`SIZE_LIMIT_MESSAGE`). `cupsfilter` 변환 결과가 10MB에 못 미치면, 파일 크기만 검증하는 별도 확인으로 대체: 실제 10MB 초과 더미 파일을 만들어 업로드했을 때 `413` 대신 애플리케이션 레벨 `400`이 오는지 확인한다.
 
 - [ ] **Step 8: 시나리오 7 — 무료 모델 폴백 확인 (로그 기반)**
 
