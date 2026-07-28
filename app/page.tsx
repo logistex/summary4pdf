@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import UploadDropzone from "@/components/UploadDropzone";
-import { MAX_FILE_SIZE_BYTES, NOT_PDF_MESSAGE, SIZE_LIMIT_MESSAGE } from "@/lib/constants";
+import SummaryResult from "@/components/SummaryResult";
+import {
+  MAX_FILE_SIZE_BYTES,
+  NOT_PDF_MESSAGE,
+  SIZE_LIMIT_MESSAGE,
+  SUMMARY_FAILED_MESSAGE,
+} from "@/lib/constants";
 import styles from "./page.module.css";
 
 type Status = "idle" | "processing" | "result" | "error";
@@ -40,7 +46,7 @@ export default function Home() {
       const json = await res.json();
       if (!res.ok) {
         setStatus("error");
-        setError(json.error ?? "요약 생성에 실패했습니다. 잠시 후 다시 시도해주세요");
+        setError(json.error ?? SUMMARY_FAILED_MESSAGE);
         return;
       }
       setData(json);
@@ -66,15 +72,7 @@ export default function Home() {
       {status === "processing" && <p className={styles.loading}>요약 생성 중...</p>}
 
       {status === "result" && data && (
-        <div>
-          <p>{data.summary}</p>
-          <ul>
-            {data.points.map((point, i) => (
-              <li key={i}>{point}</li>
-            ))}
-          </ul>
-          <button onClick={reset}>다른 PDF 요약하기</button>
-        </div>
+        <SummaryResult summary={data.summary} points={data.points} onReset={reset} />
       )}
 
       {status === "error" && (
