@@ -33,7 +33,8 @@ export async function POST(req: Request) {
 
   let extracted: { text: string; pageCount: number };
   try {
-    extracted = await extractPdfText(buffer);
+    const baseUrl = new URL(req.url).origin;
+    extracted = await extractPdfText(buffer, baseUrl);
   } catch {
     return NextResponse.json({ error: EXTRACT_FAILED_MESSAGE }, { status: 400 });
   }
