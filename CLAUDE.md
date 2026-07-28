@@ -5,27 +5,25 @@
 
 ## 프로젝트
 
-**PDF 요약 앱** — (한 줄 설명 TBD: 예. PDF 문서를 업로드하면 AI가 핵심 내용을 요약해 주는 웹앱)
+**PDF 요약 앱** — PDF 문서를 업로드하면 AI(OpenRouter 무료 모델)가 핵심 내용을 요약해 보여주는, 로그인 없는 단일 페이지 웹 도구.
 
-- 상세 설계 문서는 아직 없음. 착수 시 [`docs/PRD.md`](docs/PRD.md) 등으로 정리 예정.
+- 상세 설계: [`docs/superpowers/specs/2026-07-28-pdf-summary-app-design.md`](docs/superpowers/specs/2026-07-28-pdf-summary-app-design.md) (브레인스토밍으로 확정, 사용자 승인 완료). PRD·기능 명세는 이 설계를 바탕으로 product-manager가 착수 시 작성.
 - 형제 프로젝트: [`../7장 공감 다이어리 앱 Study_05_01`](../7장%20공감%20다이어리%20앱%20Study_05_01) — 동일 시리즈의 이전 프로젝트로, 스택/아키텍처 패턴 참고용.
 
 ## 확정된 사항
 
 - **서브에이전트**: `.claude/agents/`에 복사해 둔 5개(`product-manager`, `backend-developer`, `frontend-developer`, `ai-integration-specialist`, `qa-engineer`)를 그대로 사용한다. 별도 커스터마이징 없음.
-- **환경변수**: 형제 프로젝트([`../7장 공감 다이어리 앱 Study_05_01`](../7장%20공감%20다이어리%20앱%20Study_05_01))와 **동일한 `.env`**를 사용한다 — `OPENROUTER_API_KEY`, `DATABASE_URL`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_SECRET`(배포 시 `AUTH_TRUST_HOST` 추가). 스캐폴딩 시 형제 프로젝트의 `.env`를 그대로 복사해 사용.
-- 위 결정에 따라 자연히 함께 정해지는 것들:
-  - **LLM**: OpenRouter, 무료 모델(`:free`)만 사용 — `ai-integration-specialist.md`에 이미 명시된 정책 그대로 유효함 (형제 프로젝트와 동일 키를 쓰므로 별도 조정 불필요).
-  - **인증**: 필요함 — 구글 OAuth(Auth.js), 형제 프로젝트와 **같은 구글 OAuth 앱**.
-  - **데이터 저장**: 필요함 — 형제 프로젝트와 **같은 Postgres(Supabase) DB**를 공유. 형제 프로젝트가 `diary` 스키마로 `public`(recipe4fridge 앱)과 분리했던 것처럼, 이 앱도 **전용 스키마**로 테이블을 분리해야 함(스키마 이름은 착수 시 결정).
+- **프레임워크·배포**: 형제 프로젝트와 동일하게 **Next.js App Router + Vercel**.
+- **인증·데이터 저장 없음**: 이 앱은 로그인/계정과 요약 히스토리 저장이 **필요 없다**. 업로드 → 텍스트 추출 → 요약 → 결과 표시만 하는 완전한 stateless 도구(새로고침 시 결과 유실은 의도된 동작).
+- **환경변수**: 형제 프로젝트([`../7장 공감 다이어리 앱 Study_05_01`](../7장%20공감%20다이어리%20앱%20Study_05_01))와 **동일한 `.env` 파일**을 재사용하지만, 이 앱이 실제로 쓰는 값은 **`OPENROUTER_API_KEY`뿐**이다. `DATABASE_URL`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_SECRET`은 파일에는 있어도 이 앱에서는 사용하지 않는다.
+- **LLM**: OpenRouter, 무료 모델(`:free`)만 사용, 순차 폴백 체인(형제 프로젝트 패턴 재사용) — `ai-integration-specialist.md`에 명시된 정책 그대로 유효함.
+- **PDF 처리**: 서버사이드 처리. 업로드 제한 최대 10MB·20페이지, 초과 시 에러. 파싱 라이브러리는 `unpdf` 권장(최종 선택은 backend-developer 착수 시 확정).
+- **요약 결과 표시**: 스트리밍 없이 완료 후 한 번에 표시. 구조화된 형식(한 줄 요약 + 포인트 bullet 3~5개).
+- 자세한 아키텍처·컴포넌트·에러 처리·테스트 범위는 설계 문서 참고.
 
-## 아직 정해지지 않은 것들 (착수 시 먼저 확정)
+## 아직 정해지지 않은 것들 (착수 시 확정)
 
-- 프레임워크·배포 스택 자체는 아직 명시적으로 확인되지 않음 (다만 `.env` 구성이 `pg` + Auth.js 조합을 전제하므로, 형제 프로젝트와 동일한 Next.js App Router + Vercel일 가능성이 높음 — 착수 시 확인)
-- PDF 업로드·파싱 방식 (클라이언트 업로드 vs 서버 처리, 파싱 라이브러리)
-- 전용 DB 스키마 이름 및 테이블 설계
-- 요약 생성 세부 (스트리밍 여부, 긴 문서 청킹 전략)
-- 요약 히스토리 보관 UI/기능 범위 (DB 공유는 확정됐지만 정확히 무엇을 저장할지는 미정)
+- PDF 텍스트 추출 라이브러리 최종 선택(`unpdf` 권장, backend-developer가 최신 문서 확인 후 확정)
 
 ## 서브에이전트 재사용
 

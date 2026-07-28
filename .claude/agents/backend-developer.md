@@ -29,11 +29,11 @@ color: blue
 
 ## 이 프로젝트 관련 참고
 
-- LLM 호출은 **OpenRouter**(`OPENROUTER_API_KEY`)를 통해 이뤄진다. **무료 모델(`:free`)만 사용**하고 유료 모델은 쓰지 않는다.
-- 데이터베이스는 **PostgreSQL(Supabase)**이며, 형제 프로젝트(공감 다이어리 앱)와 **같은 DB를 공유**한다(`DATABASE_URL` 동일). 충돌을 피하려면 이 앱의 테이블은 **전용 스키마**로 한정해야 한다(스키마 이름은 아직 미정 — 착수 시 확정, 형제 프로젝트가 `diary` 스키마를 쓴 것처럼 이 앱도 `public`을 건드리지 않는다).
-- 인증은 **구글 OAuth(Auth.js)**이며, 형제 프로젝트와 **같은 구글 OAuth 앱**을 쓴다(`AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET`/`AUTH_SECRET`).
-- 위 값은 모두 형제 프로젝트의 `.env`와 동일한 값을 사용한다(자세한 내용은 `CLAUDE.md`의 "확정된 사항" 참고). 값은 `.env`에만 두고 git에 커밋하지 않는다.
-- 프레임워크(Next.js App Router 등)나 PDF 업로드·파싱 방식처럼 아직 `CLAUDE.md`의 "아직 정해지지 않은 것들"에 남아있는 항목은 임의로 정하지 말고 확인한다.
+- **인증·DB 없음.** 이 앱은 로그인/계정과 데이터 저장이 필요 없는 완전한 stateless 도구다. 업로드 → 텍스트 추출 → 요약 → 결과 반환이 한 번의 요청-응답으로 끝난다. 세션·DB 관련 코드를 임의로 추가하지 않는다.
+- 프레임워크는 **Next.js App Router**(Vercel 배포). API는 `POST /api/summarize` 단일 엔드포인트 — PDF 업로드 검증(형식/용량 10MB/페이지 20 제한) → 텍스트 추출 → OpenRouter 요약 요청까지 한 번에 처리한다.
+- PDF 텍스트 추출은 `lib/pdf/extract.ts`에서 담당. 라이브러리는 `unpdf` 권장(Vercel 서버리스 친화적) — 착수 시 최신 문서로 최종 확인 후 선택.
+- LLM 호출은 **OpenRouter**(`OPENROUTER_API_KEY`)를 통해 이뤄진다. **무료 모델(`:free`)만 사용**하고 유료 모델은 쓰지 않는다. `.env`는 형제 프로젝트(공감 다이어리 앱)와 같은 파일을 재사용하지만, 이 앱이 실제로 쓰는 값은 `OPENROUTER_API_KEY`뿐이다(`DATABASE_URL`, `AUTH_*`는 미사용).
+- 자세한 아키텍처·에러 처리·업로드 제한은 [`docs/superpowers/specs/2026-07-28-pdf-summary-app-design.md`](../../docs/superpowers/specs/2026-07-28-pdf-summary-app-design.md) 참고.
 
 ## 산출물 원칙
 
