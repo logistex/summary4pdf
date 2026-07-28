@@ -1,0 +1,61 @@
+:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --text: #1f2430;
+  --text-soft: #5b6472;
+  --border: #e2e5ea;
+  --accent: #3563e9;
+  --accent-strong: #274bc2;
+  --danger: #c0392b;
+  --danger-soft: #fbeae8;
+  --radius: 12px;
+  --maxw: 640px;
+  --font-sans: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+    "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161c;
+    --surface: #1c2028;
+    --text: #eef0f4;
+    --text-soft: #a7afbd;
+    --border: #2c313c;
+    --accent: #7295ff;
+    --accent-strong: #93aeff;
+    --danger: #e57368;
+    --danger-soft: #3a2422;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--text);
+  background: var(--bg);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+:where(a, button, input, [tabindex]):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
