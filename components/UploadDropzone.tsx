@@ -45,7 +45,7 @@ export default function UploadDropzone({ onFileSelected }: Props) {
         }
       }}
     >
-      <p>PDF 파일을 여기에 끌어다 놓거나 클릭해서 선택하세요</p>
+      <p>PDF 파일을 여기에 끌어다 놓거나 클릭해서 선택하세요.</p>
       <p className={styles.hint}>{SIZE_LIMIT_HINT}</p>
       <input
         ref={inputRef}
