@@ -27,7 +27,7 @@ export default function Home() {
   const [status, setStatus] = useState<Status>("idle");
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState<string | null>(null);
-  const [data, setData] = useState<SummaryData | null>(null);
+  const [results, setResults] = useState<SummaryData[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [resummarizing, setResummarizing] = useState(false);
   const [resummarizeError, setResummarizeError] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export default function Home() {
 
     setFile(selectedFile);
     setText(null);
-    setData(null);
+    setResults([]);
     setResummarizeError(null);
     setStatus("processing");
     setError(null);
@@ -66,7 +66,7 @@ export default function Home() {
       }
       const json = await res.json();
       setText(json.text);
-      setData({ summary: json.summary, points: json.points });
+      setResults([{ summary: json.summary, points: json.points }]);
       setStatus("result");
     } catch {
       setStatus("error");
@@ -75,7 +75,8 @@ export default function Home() {
   }
 
   async function handleResummarize() {
-    if (!data) return;
+    if (results.length === 0) return;
+    const latest = results[results.length - 1];
     setResummarizing(true);
     setResummarizeError(null);
 
@@ -83,14 +84,14 @@ export default function Home() {
       const res = await fetch("/api/resummarize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ summary: data.summary, points: data.points }),
+        body: JSON.stringify({ summary: latest.summary, points: latest.points }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok) {
         setResummarizeError(json?.error ?? RESUMMARIZE_FAILED_MESSAGE);
         return;
       }
-      setData({ summary: json.summary, points: json.points });
+      setResults((prev) => [...prev, { summary: json.summary, points: json.points }]);
     } catch {
       setResummarizeError(NETWORK_ERROR_MESSAGE);
     } finally {
@@ -102,9 +103,13 @@ export default function Home() {
     setStatus("idle");
     setFile(null);
     setText(null);
-    setData(null);
+    setResults([]);
     setError(null);
     setResummarizeError(null);
+  }
+
+  function retry() {
+    if (file) handleFile(file);
   }
 
   return (
@@ -119,10 +124,9 @@ export default function Home() {
 
       {text && <ExtractedText text={text} />}
 
-      {status === "result" && data && (
+      {status === "result" && results.length > 0 && (
         <SummaryResult
-          summary={data.summary}
-          points={data.points}
+          results={results}
           onReset={reset}
           onResummarize={handleResummarize}
           resummarizing={resummarizing}
@@ -133,7 +137,10 @@ export default function Home() {
       {status === "error" && (
         <div className={styles.errorBox}>
           <p>{error}</p>
-          <button onClick={reset}>다시 시도</button>
+          <div className={styles.errorActions}>
+            <button onClick={retry}>다시 시도</button>
+            <button onClick={reset}>다른 파일 선택</button>
+          </div>
         </div>
       )}
     </main>

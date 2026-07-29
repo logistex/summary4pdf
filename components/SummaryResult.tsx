@@ -1,8 +1,12 @@
 import styles from "./SummaryResult.module.css";
 
-interface Props {
+interface SummaryData {
   summary: string;
   points: string[];
+}
+
+interface Props {
+  results: SummaryData[];
   onReset: () => void;
   onResummarize: () => void;
   resummarizing: boolean;
@@ -10,8 +14,7 @@ interface Props {
 }
 
 export default function SummaryResult({
-  summary,
-  points,
+  results,
   onReset,
   onResummarize,
   resummarizing,
@@ -19,12 +22,17 @@ export default function SummaryResult({
 }: Props) {
   return (
     <section className={styles.result} aria-label="요약 결과">
-      <p className={styles.summary}>{summary}</p>
-      <ul className={styles.points}>
-        {points.map((point, i) => (
-          <li key={i}>{point}</li>
-        ))}
-      </ul>
+      {results.map((result, i) => (
+        <div key={i} className={styles.entry}>
+          {i > 0 && <p className={styles.entryLabel}>반복 요약 {i}</p>}
+          <p className={styles.summary}>{result.summary}</p>
+          <ul className={styles.points}>
+            {result.points.map((point, j) => (
+              <li key={j}>{point}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
       {resummarizeError && (
         <p className={styles.resummarizeError}>{resummarizeError}</p>
       )}
