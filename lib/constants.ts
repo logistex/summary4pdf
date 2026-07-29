@@ -12,3 +12,7 @@ export const TIMEOUT_MESSAGE =
   "처리 시간이 너무 오래 걸립니다. 잠시 후 다시 시도해 주세요.";
 export const NETWORK_ERROR_MESSAGE =
   "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+export const RESUMMARIZE_FAILED_MESSAGE =
+  "재요약에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+export const INVALID_RESUMMARIZE_INPUT_MESSAGE =
+  "재요약할 요약 결과가 없습니다.";

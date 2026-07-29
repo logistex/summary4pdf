@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
   try {
     const result = await summarizeText(extracted.text);
-    return NextResponse.json(result, { status: 200 });
+    return NextResponse.json({ ...result, text: extracted.text }, { status: 200 });
   } catch {
     return NextResponse.json({ error: SUMMARY_FAILED_MESSAGE }, { status: 502 });
   }

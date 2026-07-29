@@ -23,8 +23,18 @@
   color: var(--text-soft);
 }
 
+.resummarizeError {
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .resetButton {
-  align-self: flex-start;
   border: 1px solid var(--accent);
   background: transparent;
   color: var(--accent);
@@ -35,6 +45,11 @@
 
 .resetButton:hover {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.resetButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 480px) {
