@@ -38,7 +38,12 @@ export async function POST(req: Request) {
       }
       try {
         const result = await summarizeText(text, (event) => send(event));
-        send({ type: "done", summary: result.summary, points: result.points });
+        send({
+          type: "done",
+          summary: result.summary,
+          points: result.points,
+          model: result.model,
+        });
       } catch {
         send({ type: "error", message: SUMMARY_FAILED_MESSAGE });
       } finally {

@@ -3,6 +3,8 @@ import styles from "./SummaryResult.module.css";
 interface SummaryData {
   summary: string;
   points: string[];
+  model: string;
+  failedModels: string[];
 }
 
 interface Props {
@@ -35,6 +37,11 @@ export default function SummaryResult({
               <li key={j}>{point}</li>
             ))}
           </ul>
+          <p className={styles.modelInfo}>
+            사용된 모델: {result.model}
+            {result.failedModels.length > 0 &&
+              ` (실패: ${result.failedModels.join(", ")})`}
+          </p>
         </div>
       ))}
       {resummarizing && (

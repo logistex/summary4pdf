@@ -23,12 +23,14 @@ type Status = "idle" | "processing" | "result" | "error";
 interface SummaryData {
   summary: string;
   points: string[];
+  model: string;
+  failedModels: string[];
 }
 
 type SummarizeStreamEvent =
   | { type: "trying"; model: string }
   | { type: "failed"; model: string; reason?: string }
-  | { type: "done"; summary: string; points: string[] }
+  | { type: "done"; summary: string; points: string[]; model: string }
   | { type: "error"; message: string };
 
 export default function Home() {
@@ -47,15 +49,22 @@ export default function Home() {
   ): Promise<{ result: SummaryData | null; error: string | null }> {
     let result: SummaryData | null = null;
     let streamError: string | null = null;
+    const attemptedFailures: string[] = [];
 
     await readSSEStream(res, (raw) => {
       const event = raw as SummarizeStreamEvent;
       if (event.type === "trying") {
         setCurrentModel(event.model);
       } else if (event.type === "failed") {
+        attemptedFailures.push(event.model);
         setFailedModels((prev) => [...prev, event.model]);
       } else if (event.type === "done") {
-        result = { summary: event.summary, points: event.points };
+        result = {
+          summary: event.summary,
+          points: event.points,
+          model: event.model,
+          failedModels: [...attemptedFailures],
+        };
       } else if (event.type === "error") {
         streamError = event.message;
       }
