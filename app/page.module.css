@@ -18,6 +18,12 @@
   padding: 48px 0;
 }
 
+.modelFailures {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--danger);
+}
+
 .errorBox {
   border: 1px solid var(--danger);
   background: var(--danger-soft);

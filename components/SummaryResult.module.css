@@ -40,6 +40,11 @@
   color: var(--text-soft);
 }
 
+.modelStatus {
+  color: var(--text-soft);
+  font-size: 0.8rem;
+}
+
 .resummarizeError {
   color: var(--danger);
   font-size: 0.875rem;

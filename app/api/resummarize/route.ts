@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { summarizeText } from "@/lib/ai/summarize";
+import { resummarizeText } from "@/lib/ai/summarize";
 import {
   INVALID_RESUMMARIZE_INPUT_MESSAGE,
   RESUMMARIZE_FAILED_MESSAGE,
@@ -39,13 +39,28 @@ export async function POST(req: Request) {
 
   const combinedText = [summary, ...points].join("\n");
 
-  try {
-    const result = await summarizeText(combinedText);
-    return NextResponse.json(result, { status: 200 });
-  } catch {
-    return NextResponse.json(
-      { error: RESUMMARIZE_FAILED_MESSAGE },
-      { status: 502 },
-    );
-  }
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      function send(data: unknown) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      }
+      try {
+        const result = await resummarizeText(combinedText, (event) => send(event));
+        send({ type: "done", summary: result.summary, points: result.points });
+      } catch {
+        send({ type: "error", message: RESUMMARIZE_FAILED_MESSAGE });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
 }

@@ -11,6 +11,8 @@ interface Props {
   onResummarize: () => void;
   resummarizing: boolean;
   resummarizeError: string | null;
+  currentModel: string | null;
+  failedModels: string[];
 }
 
 export default function SummaryResult({
@@ -19,6 +21,8 @@ export default function SummaryResult({
   onResummarize,
   resummarizing,
   resummarizeError,
+  currentModel,
+  failedModels,
 }: Props) {
   return (
     <section className={styles.result} aria-label="요약 결과">
@@ -33,6 +37,12 @@ export default function SummaryResult({
           </ul>
         </div>
       ))}
+      {resummarizing && (
+        <p className={styles.modelStatus}>
+          {currentModel ? `${currentModel} 시도 중...` : "요약 생성 중..."}
+          {failedModels.length > 0 && ` (실패: ${failedModels.join(", ")})`}
+        </p>
+      )}
       {resummarizeError && (
         <p className={styles.resummarizeError}>{resummarizeError}</p>
       )}

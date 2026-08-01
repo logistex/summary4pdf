@@ -43,6 +43,14 @@ export interface ChatResult {
   model: string;
 }
 
+export interface FallbackEvent {
+  type: "trying" | "failed";
+  model: string;
+  reason?: string;
+}
+
+export type FallbackEventHandler = (event: FallbackEvent) => void;
+
 function debugLog(message: string): void {
   if (process.env.AI_DEBUG) {
     console.debug(`[ai/openrouter] ${message}`);
@@ -96,6 +104,7 @@ export async function chatCompletionWithFallback(
   messages: ChatMessage[],
   options: ChatOptions = {},
   validate?: (content: string) => boolean,
+  onEvent?: FallbackEventHandler,
 ): Promise<ChatResult> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -106,10 +115,12 @@ export async function chatCompletionWithFallback(
   let lastError: unknown;
 
   for (const model of models) {
+    onEvent?.({ type: "trying", model });
     try {
       const content = await requestModel(model, messages, apiKey, options);
       if (validate && !validate(content)) {
         lastError = new Error("응답 검증 실패(파싱 불가 등)");
+        onEvent?.({ type: "failed", model, reason: "응답 검증 실패" });
         debugLog(`모델 응답 검증 실패, 다음 모델로 폴백: ${model}`);
         continue;
       }
@@ -118,6 +129,7 @@ export async function chatCompletionWithFallback(
     } catch (err) {
       lastError = err;
       const reason = err instanceof Error ? err.message : "알 수 없는 오류";
+      onEvent?.({ type: "failed", model, reason });
       debugLog(`모델 실패(${reason}), 다음 모델로 폴백: ${model}`);
     }
   }

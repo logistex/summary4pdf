@@ -16,3 +16,4 @@ export const RESUMMARIZE_FAILED_MESSAGE =
   "재요약에 실패했습니다. 잠시 후 다시 시도해 주세요.";
 export const INVALID_RESUMMARIZE_INPUT_MESSAGE =
   "재요약할 요약 결과가 없습니다.";
+export const INVALID_SUMMARIZE_INPUT_MESSAGE = "요약할 텍스트가 없습니다.";

@@ -5,10 +5,12 @@ import UploadDropzone from "@/components/UploadDropzone";
 import PdfThumbnail from "@/components/PdfThumbnail";
 import ExtractedText from "@/components/ExtractedText";
 import SummaryResult from "@/components/SummaryResult";
+import { readSSEStream } from "@/lib/sse";
 import {
   MAX_FILE_SIZE_BYTES,
   NOT_PDF_MESSAGE,
   SIZE_LIMIT_MESSAGE,
+  EXTRACT_FAILED_MESSAGE,
   SUMMARY_FAILED_MESSAGE,
   RESUMMARIZE_FAILED_MESSAGE,
   TIMEOUT_MESSAGE,
@@ -23,6 +25,12 @@ interface SummaryData {
   points: string[];
 }
 
+type SummarizeStreamEvent =
+  | { type: "trying"; model: string }
+  | { type: "failed"; model: string; reason?: string }
+  | { type: "done"; summary: string; points: string[] }
+  | { type: "error"; message: string };
+
 export default function Home() {
   const [status, setStatus] = useState<Status>("idle");
   const [file, setFile] = useState<File | null>(null);
@@ -31,6 +39,30 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [resummarizing, setResummarizing] = useState(false);
   const [resummarizeError, setResummarizeError] = useState<string | null>(null);
+  const [currentModel, setCurrentModel] = useState<string | null>(null);
+  const [failedModels, setFailedModels] = useState<string[]>([]);
+
+  async function consumeSummaryStream(
+    res: Response,
+  ): Promise<{ result: SummaryData | null; error: string | null }> {
+    let result: SummaryData | null = null;
+    let streamError: string | null = null;
+
+    await readSSEStream(res, (raw) => {
+      const event = raw as SummarizeStreamEvent;
+      if (event.type === "trying") {
+        setCurrentModel(event.model);
+      } else if (event.type === "failed") {
+        setFailedModels((prev) => [...prev, event.model]);
+      } else if (event.type === "done") {
+        result = { summary: event.summary, points: event.points };
+      } else if (event.type === "error") {
+        streamError = event.message;
+      }
+    });
+
+    return { result, error: streamError };
+  }
 
   async function handleFile(selectedFile: File) {
     if (selectedFile.type !== "application/pdf") {
@@ -48,14 +80,40 @@ export default function Home() {
     setText(null);
     setResults([]);
     setResummarizeError(null);
+    setCurrentModel(null);
+    setFailedModels([]);
     setStatus("processing");
     setError(null);
 
     const formData = new FormData();
     formData.append("file", selectedFile);
 
+    let extractedText: string;
     try {
-      const res = await fetch("/api/summarize", { method: "POST", body: formData });
+      const res = await fetch("/api/extract", { method: "POST", body: formData });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        setStatus("error");
+        setError(
+          json?.error ?? (res.status === 504 ? TIMEOUT_MESSAGE : EXTRACT_FAILED_MESSAGE)
+        );
+        return;
+      }
+      const json = await res.json();
+      extractedText = json.text;
+      setText(extractedText);
+    } catch {
+      setStatus("error");
+      setError(NETWORK_ERROR_MESSAGE);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: extractedText }),
+      });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
         setStatus("error");
@@ -64,10 +122,17 @@ export default function Home() {
         );
         return;
       }
-      const json = await res.json();
-      setText(json.text);
-      setResults([{ summary: json.summary, points: json.points }]);
-      setStatus("result");
+
+      const { result, error: streamError } = await consumeSummaryStream(res);
+      setCurrentModel(null);
+
+      if (result) {
+        setResults([result]);
+        setStatus("result");
+      } else {
+        setStatus("error");
+        setError(streamError ?? SUMMARY_FAILED_MESSAGE);
+      }
     } catch {
       setStatus("error");
       setError(NETWORK_ERROR_MESSAGE);
@@ -79,6 +144,8 @@ export default function Home() {
     const latest = results[results.length - 1];
     setResummarizing(true);
     setResummarizeError(null);
+    setCurrentModel(null);
+    setFailedModels([]);
 
     try {
       const res = await fetch("/api/resummarize", {
@@ -86,15 +153,22 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ summary: latest.summary, points: latest.points }),
       });
-      const json = await res.json().catch(() => null);
       if (!res.ok) {
+        const json = await res.json().catch(() => null);
         setResummarizeError(json?.error ?? RESUMMARIZE_FAILED_MESSAGE);
         return;
       }
-      setResults((prev) => [...prev, { summary: json.summary, points: json.points }]);
+
+      const { result, error: streamError } = await consumeSummaryStream(res);
+      if (result) {
+        setResults((prev) => [...prev, result]);
+      } else {
+        setResummarizeError(streamError ?? RESUMMARIZE_FAILED_MESSAGE);
+      }
     } catch {
       setResummarizeError(NETWORK_ERROR_MESSAGE);
     } finally {
+      setCurrentModel(null);
       setResummarizing(false);
     }
   }
@@ -106,6 +180,8 @@ export default function Home() {
     setResults([]);
     setError(null);
     setResummarizeError(null);
+    setCurrentModel(null);
+    setFailedModels([]);
   }
 
   function retry() {
@@ -120,9 +196,22 @@ export default function Home() {
 
       {file && status !== "idle" && <PdfThumbnail file={file} />}
 
-      {status === "processing" && <p className={styles.loading}>요약 생성 중...</p>}
+      {status === "processing" && !text && (
+        <p className={styles.loading}>텍스트 추출 중...</p>
+      )}
 
       {text && <ExtractedText text={text} />}
+
+      {status === "processing" && text && (
+        <div className={styles.loading}>
+          <p>요약 생성 중{currentModel ? ` — ${currentModel} 시도 중` : "..."}</p>
+          {failedModels.length > 0 && (
+            <p className={styles.modelFailures}>
+              실패한 모델: {failedModels.join(", ")}
+            </p>
+          )}
+        </div>
+      )}
 
       {status === "result" && results.length > 0 && (
         <SummaryResult
@@ -131,6 +220,8 @@ export default function Home() {
           onResummarize={handleResummarize}
           resummarizing={resummarizing}
           resummarizeError={resummarizeError}
+          currentModel={currentModel}
+          failedModels={failedModels}
         />
       )}
 
